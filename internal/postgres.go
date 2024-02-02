@@ -25,23 +25,24 @@ const tablesQuery = `
 		inner join information_schema.columns c on t.table_name = c.table_name and t.table_schema = c.table_schema 
 		left join col_constraints cc on t.table_schema = cc.table_schema and c.column_name = cc.column_name and c.table_name = cc.table_name
 	where
-		t.table_schema = 'public' and t.table_type  = 'BASE TABLE'
+		t.table_schema = $1 and t.table_type = 'BASE TABLE'
 	order by t.table_name, c.ordinal_position
 `
 
 type PostgresCrawler struct {
+	db *sql.DB
 }
 
-func (p *PostgresCrawler) Crawl(db *sql.DB) (*DatabaseSchema, error) {
-	if db == nil {
+func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
+	if p.db == nil {
 		return nil, errors.New("database is nil")
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := p.db.Ping(); err != nil {
 		return nil, err
 	}
 
-	rows, err := db.Query(tablesQuery)
+	rows, err := p.db.Query(tablesQuery, schemaName)
 	if err != nil {
 		return nil, err
 	}
@@ -50,15 +51,14 @@ func (p *PostgresCrawler) Crawl(db *sql.DB) (*DatabaseSchema, error) {
 	// and each table will have 20 columns capacity
 	tables := make([]Table, 0, 20)
 
-	t := ""
-	var table Table
+	var table *Table = nil
 
 	for rows.Next() {
 		var (
 			tableName  string
 			columnName string
 			dataType   string
-			nullable   bool
+			nullable   string
 			relType    sql.NullString
 		)
 
@@ -67,22 +67,33 @@ func (p *PostgresCrawler) Crawl(db *sql.DB) (*DatabaseSchema, error) {
 			continue
 		}
 
-		if t != tableName {
-			// create new Table entity and add current column
-			table = Table{
+		if table == nil {
+			table = &Table{
+				Name:    tableName,
 				Columns: make([]Column, 0, 20),
 			}
+		}
 
-			tables = append(tables, table)
+		if table.Name != tableName {
+			tables = append(tables, *table)
+
+			table = &Table{
+				Name:    tableName,
+				Columns: make([]Column, 0, 20),
+			}
 		}
 
 		table.Columns = append(table.Columns, Column{
 			Name:       columnName,
 			Datatype:   dataType,
-			Nullable:   nullable,
+			Nullable:   nullable == "YES",
 			PrimaryKey: relType.Valid && relType.String == "p",
 			FK:         relType.Valid && relType.String == "f",
 		})
+	}
+
+	if table != nil {
+		tables = append(tables, *table)
 	}
 
 	return &DatabaseSchema{

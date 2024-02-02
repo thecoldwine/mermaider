@@ -2,20 +2,18 @@ package internal
 
 import (
 	"bufio"
-	"database/sql"
 	"io"
 	"strings"
 )
 
 type SchemaCrawler interface {
-	Crawl(db *sql.DB) (*DatabaseSchema, error)
+	Crawl(schemaName string) (*DatabaseSchema, error)
 }
 
 // yes, it is a verb here :3
 // we're always using \n as a line separator because we can (and because go standard library does the same)
-func Mermaid(db *sql.DB, crawler SchemaCrawler, w io.Writer) error {
-	schema, err := crawler.Crawl(db)
-
+func Mermaid(crawler SchemaCrawler, schemaName string, w io.Writer) error {
+	schema, err := crawler.Crawl(schemaName)
 	if err != nil {
 		return err
 	}
@@ -23,18 +21,22 @@ func Mermaid(db *sql.DB, crawler SchemaCrawler, w io.Writer) error {
 	prefix := strings.Repeat(" ", 4)
 
 	b := bufio.NewWriter(w)
+	defer b.Flush()
+
 	b.WriteString("erDiagram\n")
 
 	for _, t := range schema.Tables {
 
-		b.WriteString(prefix + t.Name + "{\n")
+		b.WriteString(prefix + t.Name + " {\n")
 
 		for _, c := range t.Columns {
-			str := prefix + prefix + c.Name + " " + c.Datatype + "\n"
+			str := prefix + prefix + c.Name + " " + strings.ReplaceAll(c.Datatype, " ", "_") + "\n"
 			b.WriteString(str)
 		}
 
 		b.WriteString(prefix + "}\n")
+
+		b.Flush()
 	}
 
 	return nil
