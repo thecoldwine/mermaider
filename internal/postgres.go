@@ -6,7 +6,7 @@ import (
 )
 
 const tablesQuery = `
-	with col_constraints as (select 
+	with col_constraints as (select
 		k.table_schema,
 		k.table_name,
 		k.column_name,
@@ -22,7 +22,7 @@ const tablesQuery = `
 		cc.contype
 	from
 		information_schema.tables t
-		inner join information_schema.columns c on t.table_name = c.table_name and t.table_schema = c.table_schema 
+		inner join information_schema.columns c on t.table_name = c.table_name and t.table_schema = c.table_schema
 		left join col_constraints cc on t.table_schema = cc.table_schema and c.column_name = cc.column_name and c.table_name = cc.table_name
 	where
 		t.table_schema = $1 and t.table_type = 'BASE TABLE'
@@ -36,11 +36,11 @@ const tablesQuery = `
 // many-to-one
 const relationsQuery = `
 	SELECT
-		tc.table_name, 
-		kcu.column_name, 
+		tc.table_name,
+		kcu.column_name,
 		ccu.table_name AS foreign_table_name,
-		ccu.column_name AS foreign_column_name 
-	FROM information_schema.table_constraints AS tc 
+		ccu.column_name AS foreign_column_name
+	FROM information_schema.table_constraints AS tc
 	JOIN information_schema.key_column_usage AS kcu
 		ON tc.constraint_name = kcu.constraint_name
 		AND tc.table_schema = kcu.table_schema
