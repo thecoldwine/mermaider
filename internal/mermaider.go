@@ -11,11 +11,10 @@ erDiagram
 {{ range .Tables }} 
   {{ .Name }} {
    {{ range .Columns }} {{ escape .Datatype }} {{ .Name }} {{ renderKeys . }} {{ renderNullability . }}
-   {{ end }}
+   {{end}}
   }
-{{ end }}
-{{ range .Relations }}
-{{ end }}
+{{ end }}{{ range .Relations }}
+  {{ .DestinationTable }} ||--o{ {{ .SourceTable }} : ""{{ end }}
 `
 
 func escapeSpaces(s string) string {

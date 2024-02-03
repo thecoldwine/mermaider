@@ -29,20 +29,39 @@ const tablesQuery = `
 	order by t.table_name, c.ordinal_position
 `
 
+// Mermaid isn't very nice when it comes to support actual
+// links between columns in ER, but we still like to know
+// the column names
+// This query _always_ interprets connection type as
+// many-to-one
+const relationsQuery = `
+	SELECT
+		tc.table_name, 
+		kcu.column_name, 
+		ccu.table_name AS foreign_table_name,
+		ccu.column_name AS foreign_column_name 
+	FROM information_schema.table_constraints AS tc 
+	JOIN information_schema.key_column_usage AS kcu
+		ON tc.constraint_name = kcu.constraint_name
+		AND tc.table_schema = kcu.table_schema
+	JOIN information_schema.constraint_column_usage AS ccu
+		ON ccu.constraint_name = tc.constraint_name
+	WHERE tc.constraint_type = 'FOREIGN KEY'
+		and tc.table_schema = $1
+`
+
 type PostgresCrawler struct {
 	db *sql.DB
 }
 
-func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
-	if p.db == nil {
-		return nil, errors.New("database is nil")
+func NewPostgresCrawler(db *sql.DB) *PostgresCrawler {
+	return &PostgresCrawler{
+		db: db,
 	}
+}
 
-	if err := p.db.Ping(); err != nil {
-		return nil, err
-	}
-
-	rows, err := p.db.Query(tablesQuery, schemaName)
+func crawlTables(db *sql.DB, schemaName string) ([]Table, error) {
+	rows, err := db.Query(tablesQuery, schemaName)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +78,10 @@ func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 			columnName string
 			dataType   string
 			nullable   string
-			relType    sql.NullString
+			conType    sql.NullString
 		)
 
-		err = rows.Scan(&tableName, &columnName, &dataType, &nullable, &relType)
+		err = rows.Scan(&tableName, &columnName, &dataType, &nullable, &conType)
 		if err != nil {
 			continue
 		}
@@ -87,8 +106,8 @@ func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 			Name:       columnName,
 			Datatype:   dataType,
 			Nullable:   nullable == "YES",
-			PrimaryKey: relType.Valid && relType.String == "p",
-			ForeignKey: relType.Valid && relType.String == "f",
+			PrimaryKey: conType.Valid && conType.String == "p",
+			ForeignKey: conType.Valid && conType.String == "f",
 		})
 	}
 
@@ -96,8 +115,63 @@ func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 		tables = append(tables, *table)
 	}
 
+	return tables, nil
+}
+
+func crawlRelations(db *sql.DB, schemaName string) ([]Relation, error) {
+	rows, err := db.Query(relationsQuery, schemaName)
+	if err != nil {
+		return nil, err
+	}
+
+	relations := make([]Relation, 0, 20)
+
+	for rows.Next() {
+		var (
+			srcTable  string
+			srcColumn string
+			dstTable  string
+			dstColumn string
+		)
+
+		err = rows.Scan(&srcTable, &srcColumn, &dstTable, &dstColumn)
+		if err != nil {
+			continue
+		}
+
+		relations = append(relations, Relation{
+			SourceTable:       srcTable,
+			SourceColumn:      srcColumn,
+			DestinationTable:  dstTable,
+			DestinationColumn: dstColumn,
+			RelType:           ManyToOne,
+		})
+	}
+
+	return relations, nil
+}
+
+func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
+	if p.db == nil {
+		return nil, errors.New("database is nil")
+	}
+
+	if err := p.db.Ping(); err != nil {
+		return nil, err
+	}
+
+	tables, err := crawlTables(p.db, schemaName)
+	if err != nil {
+		return nil, err
+	}
+
+	relations, err := crawlRelations(p.db, schemaName)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DatabaseSchema{
 		Tables:    tables,
-		Relations: make([]Relation, 0),
+		Relations: relations,
 	}, nil
 }

@@ -50,7 +50,15 @@ func (m *mockCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 				},
 			},
 		},
-		Relations: []Relation{},
+		Relations: []Relation{
+			{
+				SourceTable:       "table2",
+				SourceColumn:      "pkey2",
+				DestinationTable:  "table1",
+				DestinationColumn: "pkey",
+				RelType:           ManyToOne,
+			},
+		},
 	}, nil
 }
 

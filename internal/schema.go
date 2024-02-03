@@ -24,11 +24,14 @@ type RelationType int8
 const (
 	OneToOne   RelationType = 0
 	OneToMany  RelationType = 1
-	ManyToMany RelationType = 2
+	ManyToOne  RelationType = 2
+	ManyToMany RelationType = 3
 )
 
 type Relation struct {
-	Source      string
-	Destination string
-	RelType     RelationType
+	SourceTable       string
+	SourceColumn      string
+	DestinationTable  string
+	DestinationColumn string
+	RelType           RelationType
 }

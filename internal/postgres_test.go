@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 	"database/sql"
-	"log"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -61,10 +61,21 @@ func TestPostgresCrawl(t *testing.T) {
 		t.Fatalf("Expected 21 table, but got %d", len(schema.Tables))
 	}
 
-	log.Printf("%v", schema.Tables)
-
 	for _, table := range schema.Tables {
-		t.Logf("Table name: %s, data: %v\n", table.Name, table.Columns)
+		t.Logf("Table name: %s, total columns: %d\n", table.Name, len(table.Columns))
+	}
+
+	if len(schema.Relations) != 40 {
+		t.Fatalf("Expected 40 relations, but got %d", len(schema.Relations))
+	}
+
+	for _, rel := range schema.Relations {
+		t.Logf("Relation %s -> %s via %s = %s", rel.SourceTable, rel.DestinationTable, rel.SourceColumn, rel.DestinationColumn)
+	}
+
+	err = Mermaid(&pgCrawler, "public", os.Stdout)
+	if err != nil {
+		t.Fatalf("Error while mermaiding: %s", err)
 	}
 
 	// Clean up the container
