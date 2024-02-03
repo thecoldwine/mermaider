@@ -1,10 +1,50 @@
 package internal
 
 import (
-	"bufio"
 	"io"
 	"strings"
+	"text/template"
 )
+
+const mermaidTemplate = `
+erDiagram
+{{ range .Tables }} 
+  {{ .Name }} {
+   {{ range .Columns }} {{ escape .Datatype }} {{ .Name }} {{ renderKeys . }} {{ renderNullability . }}
+   {{ end }}
+  }
+{{ end }}
+{{ range .Relations }}
+{{ end }}
+`
+
+func escapeSpaces(s string) string {
+	return strings.ReplaceAll(s, " ", "_")
+}
+
+func renderKeys(c Column) string {
+	if c.PrimaryKey && c.ForeignKey {
+		return "PK,FK"
+	}
+
+	if c.PrimaryKey {
+		return "PK"
+	}
+
+	if c.ForeignKey {
+		return "FK"
+	}
+
+	return ""
+}
+
+func renderNullability(c Column) string {
+	if c.Nullable {
+		return ""
+	}
+
+	return "\"not null\""
+}
 
 type SchemaCrawler interface {
 	Crawl(schemaName string) (*DatabaseSchema, error)
@@ -18,25 +58,18 @@ func Mermaid(crawler SchemaCrawler, schemaName string, w io.Writer) error {
 		return err
 	}
 
-	prefix := strings.Repeat(" ", 4)
+	t, err := template.New("m1").Funcs(template.FuncMap{
+		"escape":            escapeSpaces,
+		"renderKeys":        renderKeys,
+		"renderNullability": renderNullability,
+	}).Parse(mermaidTemplate)
+	if err != nil {
+		return err
+	}
 
-	b := bufio.NewWriter(w)
-	defer b.Flush()
-
-	b.WriteString("erDiagram\n")
-
-	for _, t := range schema.Tables {
-
-		b.WriteString(prefix + t.Name + " {\n")
-
-		for _, c := range t.Columns {
-			str := prefix + prefix + c.Name + " " + strings.ReplaceAll(c.Datatype, " ", "_") + "\n"
-			b.WriteString(str)
-		}
-
-		b.WriteString(prefix + "}\n")
-
-		b.Flush()
+	err = t.Execute(w, schema)
+	if err != nil {
+		return err
 	}
 
 	return nil

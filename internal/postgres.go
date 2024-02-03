@@ -88,7 +88,7 @@ func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 			Datatype:   dataType,
 			Nullable:   nullable == "YES",
 			PrimaryKey: relType.Valid && relType.String == "p",
-			FK:         relType.Valid && relType.String == "f",
+			ForeignKey: relType.Valid && relType.String == "f",
 		})
 	}
 

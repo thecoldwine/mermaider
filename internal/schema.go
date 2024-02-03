@@ -15,7 +15,7 @@ type Column struct {
 	Datatype   string
 	Nullable   bool
 	PrimaryKey bool
-	FK         bool
+	ForeignKey bool
 }
 
 type RelationType int8
