@@ -17,7 +17,7 @@ Usage of mermaider:
   -connection-string string
         Connection string to a target database, driver will be inferred automatically
   -db-type string
-        Type of the database if it cannot be guessed right from the connection string (default "postgres")
+        Type of the database if it cannot be guessed right from the connection string (default "postgres"), options: postgres, sqlserver
   -schema string
         Schema name for the database, defaults to dbo for MSSQL, public for postgres
 ```
@@ -27,6 +27,20 @@ Example:
 ```bash
 mermaider -connection-string "host=localhost port=5432 user=postgres password=postgres dbname=postgres sslmode=disable" -schema public
 ```
+
+### Supported databases
+
+| Database        | Supported |
+| --------------- | --------- |
+| Postgres        | Yes       |
+| MSSQL           | Yes       |
+| MySQL / MariaDB | Planned   |
+| SQLite          | Planned   |
+
+### Limitations
+
+Currently app designed only for usage with a single schema. It is relatively easy to change that and will be done at the later
+point.
 
 ## Contribution
 
@@ -38,11 +52,4 @@ BSD 2-Clause License
 
 ## Plans
 
-_before 1.0_
-- [x] Add support for Mermaid output
-- [x] Add support for Postgres
-- [ ] Add support for MS SQL Server
-  
-_maybe_
 - [ ] Add support for Graphviz output
-- [ ] Add support for MySQL

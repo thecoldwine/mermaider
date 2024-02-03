@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-const tablesQuery = `
+const pgTablesQuery = `
 	with col_constraints as (select
 		k.table_schema,
 		k.table_name,
@@ -34,7 +34,7 @@ const tablesQuery = `
 // the column names
 // This query _always_ interprets connection type as
 // many-to-one
-const relationsQuery = `
+const pgRelationsQuery = `
 	SELECT
 		tc.table_name,
 		kcu.column_name,
@@ -60,8 +60,8 @@ func NewPostgresCrawler(db *sql.DB) *PostgresCrawler {
 	}
 }
 
-func crawlTables(db *sql.DB, schemaName string) ([]Table, error) {
-	rows, err := db.Query(tablesQuery, schemaName)
+func pgCrawlTables(db *sql.DB, schemaName string) ([]Table, error) {
+	rows, err := db.Query(pgTablesQuery, schemaName)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +118,8 @@ func crawlTables(db *sql.DB, schemaName string) ([]Table, error) {
 	return tables, nil
 }
 
-func crawlRelations(db *sql.DB, schemaName string) ([]Relation, error) {
-	rows, err := db.Query(relationsQuery, schemaName)
+func pgCrawlRelations(db *sql.DB, schemaName string) ([]Relation, error) {
+	rows, err := db.Query(pgRelationsQuery, schemaName)
 	if err != nil {
 		return nil, err
 	}
@@ -160,12 +160,12 @@ func (p *PostgresCrawler) Crawl(schemaName string) (*DatabaseSchema, error) {
 		return nil, err
 	}
 
-	tables, err := crawlTables(p.db, schemaName)
+	tables, err := pgCrawlTables(p.db, schemaName)
 	if err != nil {
 		return nil, err
 	}
 
-	relations, err := crawlRelations(p.db, schemaName)
+	relations, err := pgCrawlRelations(p.db, schemaName)
 	if err != nil {
 		return nil, err
 	}

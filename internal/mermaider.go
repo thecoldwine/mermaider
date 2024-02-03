@@ -8,9 +8,9 @@ import (
 
 const mermaidTemplate = `
 erDiagram
-{{ range .Tables }} 
+{{ range .Tables }}
   {{ .Name }} {
-   {{ range .Columns }} {{ escape .Datatype }} {{ .Name }} {{ renderKeys . }} {{ renderNullability . }}
+   {{ range .Columns }} {{ .Name }} {{ escape .Datatype }} {{ renderKeys . }} {{ renderNullability . }}
    {{end}}
   }
 {{ end }}{{ range .Relations }}

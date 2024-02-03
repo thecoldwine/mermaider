@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/microsoft/go-mssqldb/azuread"
 	"github.com/microsoft/go-mssqldb/msdsn"
 	"github.com/thecoldwine/mermaider/internal"
 )
@@ -37,10 +38,15 @@ func main() {
 
 	flag.Parse()
 
-	guessedDb := guessDatabase(connString)
-	if guessedDb == "unknown" {
-		guessedDb = dbType
+	guessedDb := dbType
+	if guessedDb == "postgres" {
+		guessedDb = guessDatabase(connString)
+		if guessedDb == "unknown" {
+			guessedDb = dbType
+		}
 	}
+
+	log.Println("Guessed database", guessedDb)
 
 	var crawler internal.SchemaCrawler
 	switch guessedDb {
@@ -56,10 +62,16 @@ func main() {
 
 		crawler = internal.NewPostgresCrawler(db)
 	case "sqlserver":
+		db, err := sql.Open(azuread.DriverName, connString)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
 		if schemaName == "" {
 			schemaName = "dbo"
 		}
-		log.Fatalln("Not implemented yet")
+
+		crawler = internal.NewMssqlCrawler(db)
 	default:
 		log.Fatalf("Unknown database type: %s\n", guessedDb)
 	}
