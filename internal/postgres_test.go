@@ -51,13 +51,17 @@ func TestPostgresCrawl(t *testing.T) {
 		t.Fatalf("error while pinging the context %s", err)
 	}
 
-	pgCrawler := PostgresCrawler{db: db}
+	pgCrawler := GenericCrawler{db: db, flavorer: PostgresFlavorer}
 	schema, err := pgCrawler.Crawl("public")
 	if err != nil {
 		t.Fatalf("Cannot crawl a database schema: %s", err)
 	}
 
 	if len(schema.Tables) != 21 {
+		for _, tbl := range schema.Tables {
+			t.Logf("%s\n", tbl.Name)
+		}
+
 		t.Fatalf("Expected 21 table, but got %d", len(schema.Tables))
 	}
 

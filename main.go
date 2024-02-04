@@ -60,7 +60,7 @@ func main() {
 			schemaName = "public"
 		}
 
-		crawler = internal.NewPostgresCrawler(db)
+		crawler = internal.NewGenericCrawler(db, internal.PostgresFlavorer)
 	case "sqlserver":
 		db, err := sql.Open(azuread.DriverName, connString)
 		if err != nil {
@@ -71,7 +71,7 @@ func main() {
 			schemaName = "dbo"
 		}
 
-		crawler = internal.NewMssqlCrawler(db)
+		crawler = internal.NewGenericCrawler(db, internal.MssqlFlavorer)
 	default:
 		log.Fatalf("Unknown database type: %s\n", guessedDb)
 	}
